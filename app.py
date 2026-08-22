@@ -1,9 +1,12 @@
 import json
 import os
+import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 CONFIG_FILE = "config.json"
+TEMP_FILE = "config.tmp"
+BACKUP_FILE = "config.bak"
 
 DEFAULT_CONFIG = {
     "nombre_usuario": "Usuario",
@@ -20,7 +23,7 @@ class ConfigApp:
 
   def __init__(self, root):
     self.root = root
-    self.root.title("LAB1 - GESTION DE CONFIG")
+    self.root.title("Gestión de Configuración - Lab 1")
     self.root.geometry("450x500")
 
     self.config_data = self.cargar_configuracion()
@@ -39,6 +42,39 @@ class ConfigApp:
         return config
     except Exception:
       return DEFAULT_CONFIG.copy()
+
+  def guardar_configuracion(self):
+    """Escritura segura: archivo temporal -> respaldo -> reemplazo atómico."""
+    try:
+      # 1. Crear respaldo (.bak) si el archivo original existe
+      if os.path.exists(CONFIG_FILE):
+        shutil.copy2(CONFIG_FILE, BACKUP_FILE)
+
+      # 2. Escribir primero al archivo temporal (.tmp) en UTF-8
+      with open(TEMP_FILE, "w", encoding="utf-8") as f:
+        json.dump(self.config_data, f, ensure_ascii=False, indent=4)
+
+      # 3. Reemplazar el archivo final de forma atómica
+      os.replace(TEMP_FILE, CONFIG_FILE)
+
+      messagebox.showinfo(
+          "Éxito", "Configuración guardada de forma segura y consistente."
+      )
+
+    except PermissionError:
+      messagebox.showerror(
+          "Error de Permisos",
+          "No hay permisos de escritura para guardar la configuración.",
+      )
+      if os.path.exists(TEMP_FILE):
+        os.remove(TEMP_FILE)
+
+    except Exception as e:
+      messagebox.showerror(
+          "Error", f"Ocurrió un error inesperado al guardar: {e}"
+      )
+      if os.path.exists(TEMP_FILE):
+        os.remove(TEMP_FILE)
 
   def crear_menu(self):
     menubar = tk.Menu(self.root)
@@ -74,7 +110,7 @@ class ConfigApp:
 
     ttk.Label(
         self.frame,
-        text="panel principal- configuración actual",
+        text="Panel Principal - Configuración Actual",
         font=("Arial", 12, "bold"),
     ).pack(pady=10)
 
@@ -149,7 +185,7 @@ class ConfigApp:
     )
     lbl_ruta_val.pack(padx=20, anchor="w")
 
-    def guardar_temporal_ui():
+    def guardar_cambios_ui():
       try:
         self.config_data["nombre_usuario"] = ent_nombre.get()
         self.config_data["tema"] = cb_tema.get()
@@ -160,19 +196,17 @@ class ConfigApp:
         if foto_txt != "Sin selección":
           self.config_data["foto_perfil"] = foto_txt
 
+        # Aquí disparamos el guardado físico real con backup y tmp
+        self.guardar_configuracion()
         self.lbl_info.config(text=self.obtener_texto_resumen())
-        messagebox.showinfo(
-            "Info",
-            "Cambios aplicados en memoria",
-        )
         top.destroy()
       except ValueError:
         messagebox.showerror(
-            "Errorrrr, solo nums enteros"
+            "Error", "El tamaño de fuente debe ser un número entero."
         )
 
     btn_guardar = ttk.Button(
-        top, text="SE APLICARAN CAMBIOS", command=guardar_temporal_ui
+        top, text="Guardar Cambios", command=guardar_cambios_ui
     )
     btn_guardar.pack(pady=20)
 
