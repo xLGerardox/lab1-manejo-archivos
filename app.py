@@ -9,7 +9,7 @@ TEMP_FILE = "config.tmp"
 BACKUP_FILE = "config.bak"
 
 DEFAULT_CONFIG = {
-    "nombre_usuario": "Usuario",
+    "nombre_usuario": "José María",
     "tema": "Claro",
     "idioma": "es-ES",
     "tamanio_fuente": 12,
@@ -32,15 +32,44 @@ class ConfigApp:
     self.crear_interfaz_principal()
 
   def cargar_configuracion(self):
+    """Carga la configuración manejando explícitamente:
+
+    - Archivo ausente -> valores por defecto[cite: 1]
+    - Archivo corrupto o inválido -> aviso y valores por defecto[cite: 1]
+    - Falta de permisos de lectura -> aviso y valores por defecto[cite: 1]
+    """
     if not os.path.exists(CONFIG_FILE):
+      print("[INFO] Archivo de configuración ausente. Usando valores por defecto.")
       return DEFAULT_CONFIG.copy()
+
     try:
       with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
+        if not isinstance(data, dict):
+          raise ValueError("El archivo JSON no contiene un diccionario válido.")
         config = DEFAULT_CONFIG.copy()
         config.update(data)
         return config
-    except Exception:
+
+    except (json.JSONDecodeError, ValueError) as e:
+      print(f"[ERROR] Archivo corrupto o con formato inválido: {e}")
+      messagebox.showwarning(
+          "Archivo Corrupto",
+          "El archivo de configuración está corrupto o es inválido. Se"
+          " usarán valores por defecto.",
+      )
+      return DEFAULT_CONFIG.copy()
+
+    except PermissionError:
+      print("[ERROR] Sin permisos de lectura en el archivo de configuración.")
+      messagebox.showerror(
+          "Error de Permisos",
+          "No hay permisos de lectura para acceder al archivo de configuración.",
+      )
+      return DEFAULT_CONFIG.copy()
+
+    except Exception as e:
+      print(f"[ERROR Inesperado al cargar]: {e}")
       return DEFAULT_CONFIG.copy()
 
   def guardar_configuracion(self):
@@ -56,12 +85,12 @@ class ConfigApp:
 
       # 3. Reemplazar el archivo final de forma atómica
       os.replace(TEMP_FILE, CONFIG_FILE)
-
       messagebox.showinfo(
           "Éxito", "Configuración guardada de forma segura y consistente."
       )
 
     except PermissionError:
+      print("[ERROR] Sin permisos de escritura al intentar guardar.")
       messagebox.showerror(
           "Error de Permisos",
           "No hay permisos de escritura para guardar la configuración.",
@@ -70,6 +99,7 @@ class ConfigApp:
         os.remove(TEMP_FILE)
 
     except Exception as e:
+      print(f"[ERROR Inesperado al guardar]: {e}")
       messagebox.showerror(
           "Error", f"Ocurrió un error inesperado al guardar: {e}"
       )
@@ -196,7 +226,6 @@ class ConfigApp:
         if foto_txt != "Sin selección":
           self.config_data["foto_perfil"] = foto_txt
 
-        # Aquí disparamos el guardado físico real con backup y tmp
         self.guardar_configuracion()
         self.lbl_info.config(text=self.obtener_texto_resumen())
         top.destroy()
