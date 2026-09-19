@@ -23,7 +23,7 @@ class ConfigApp:
 
   def __init__(self, root):
     self.root = root
-    self.root.title("Gestión de Configuración - Lab 1")
+    self.root.title("Gestión de Configuración")
     self.root.geometry("450x500")
 
     self.config_data = self.cargar_configuracion()
@@ -32,100 +32,79 @@ class ConfigApp:
     self.crear_interfaz_principal()
 
   def cargar_configuracion(self):
-    """Carga la configuración manejando explícitamente:
-
-    - Archivo ausente -> valores por defecto[cite: 1]
-    - Archivo corrupto o inválido -> aviso y valores por defecto[cite: 1]
-    - Falta de permisos de lectura -> aviso y valores por defecto[cite: 1]
-    """
     if not os.path.exists(CONFIG_FILE):
-      print("[INFO] Archivo de configuración ausente. Usando valores por defecto.")
       return DEFAULT_CONFIG.copy()
 
     try:
       with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
         if not isinstance(data, dict):
-          raise ValueError("El archivo JSON no contiene un diccionario válido.")
+          raise ValueError("Formato de diccionario inválido.")
         config = DEFAULT_CONFIG.copy()
         config.update(data)
         return config
 
-    except (json.JSONDecodeError, ValueError) as e:
-      print(f"[ERROR] Archivo corrupto o con formato inválido: {e}")
+    except (json.JSONDecodeError, ValueError):
       messagebox.showwarning(
-          "Archivo Corrupto",
-          "El archivo de configuración está corrupto o es inválido. Se"
-          " usarán valores por defecto.",
+          "Aviso",
+          "El archivo de configuración presenta un formato inválido. Se"
+          " cargarán los valores predeterminados.",
       )
       return DEFAULT_CONFIG.copy()
 
     except PermissionError:
-      print("[ERROR] Sin permisos de lectura en el archivo de configuración.")
       messagebox.showerror(
-          "Error de Permisos",
-          "No hay permisos de lectura para acceder al archivo de configuración.",
+          "Error",
+          "No se cuentan con los permisos necesarios para leer el archivo.",
       )
       return DEFAULT_CONFIG.copy()
 
-    except Exception as e:
-      print(f"[ERROR Inesperado al cargar]: {e}")
+    except Exception:
       return DEFAULT_CONFIG.copy()
 
   def guardar_configuracion(self):
-    """Escritura segura: archivo temporal -> respaldo -> reemplazo atómico."""
     try:
-      # 1. Crear respaldo (.bak) si el archivo original existe
       if os.path.exists(CONFIG_FILE):
         shutil.copy2(CONFIG_FILE, BACKUP_FILE)
 
-      # 2. Escribir primero al archivo temporal (.tmp) en UTF-8
       with open(TEMP_FILE, "w", encoding="utf-8") as f:
         json.dump(self.config_data, f, ensure_ascii=False, indent=4)
 
-      # 3. Reemplazar el archivo final de forma atómica
       os.replace(TEMP_FILE, CONFIG_FILE)
-      messagebox.showinfo(
-          "Éxito", "Configuración guardada de forma segura y consistente."
-      )
+      messagebox.showinfo("Éxito", "Los cambios se guardaron correctamente.")
 
     except PermissionError:
-      print("[ERROR] Sin permisos de escritura al intentar guardar.")
       messagebox.showerror(
-          "Error de Permisos",
-          "No hay permisos de escritura para guardar la configuración.",
+          "Error", "No hay permisos de escritura en el directorio."
       )
       if os.path.exists(TEMP_FILE):
         os.remove(TEMP_FILE)
 
     except Exception as e:
-      print(f"[ERROR Inesperado al guardar]: {e}")
-      messagebox.showerror(
-          "Error", f"Ocurrió un error inesperado al guardar: {e}"
-      )
+      messagebox.showerror("Error", f"Ocurrió un error al guardar: {e}")
       if os.path.exists(TEMP_FILE):
         os.remove(TEMP_FILE)
 
   def crear_menu(self):
     menubar = tk.Menu(self.root)
 
-    # Menú Archivo (Simulado)
+    # Menú Archivo
     archivo_menu = tk.Menu(menubar, tearoff=0)
     archivo_menu.add_command(label="Nuevo", state="disabled")
     archivo_menu.add_command(label="Abrir", state="disabled")
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
 
-    # Menú Edición (Simulado)
+    # Menú Edición
     edicion_menu = tk.Menu(menubar, tearoff=0)
     edicion_menu.add_command(label="Deshacer", state="disabled")
     menubar.add_cascade(label="Edición", menu=edicion_menu)
 
-    # Menú Ver (Simulado)
+    # Menú Ver
     ver_menu = tk.Menu(menubar, tearoff=0)
     ver_menu.add_command(label="Zoom", state="disabled")
     menubar.add_cascade(label="Ver", menu=ver_menu)
 
-    # Menú Settings (Funcional)
+    # Menú Configuración
     settings_menu = tk.Menu(menubar, tearoff=0)
     settings_menu.add_command(
         label="Abrir Configuración", command=self.abrir_ventana_settings
@@ -170,31 +149,26 @@ class ConfigApp:
     top.title("Configuración de Usuario")
     top.geometry("350x450")
 
-    # Nombre usuario
     ttk.Label(top, text="Nombre de usuario:").pack(anchor="w", padx=20, pady=5)
     ent_nombre = ttk.Entry(top)
     ent_nombre.insert(0, self.config_data.get("nombre_usuario"))
     ent_nombre.pack(fill=tk.X, padx=20)
 
-    # Tema
     ttk.Label(top, text="Tema interfaz:").pack(anchor="w", padx=20, pady=5)
     cb_tema = ttk.Combobox(top, values=["Claro", "Oscuro"], state="readonly")
     cb_tema.set(self.config_data.get("tema"))
     cb_tema.pack(fill=tk.X, padx=20)
 
-    # Idioma
     ttk.Label(top, text="Idioma:").pack(anchor="w", padx=20, pady=5)
     cb_idioma = ttk.Combobox(top, values=["es-ES", "en-US"], state="readonly")
     cb_idioma.set(self.config_data.get("idioma"))
     cb_idioma.pack(fill=tk.X, padx=20)
 
-    # Tamaño fuente
     ttk.Label(top, text="Tamaño fuente:").pack(anchor="w", padx=20, pady=5)
     ent_fuente = ttk.Entry(top)
     ent_fuente.insert(0, str(self.config_data.get("tamanio_fuente")))
     ent_fuente.pack(fill=tk.X, padx=20)
 
-    # Foto de perfil selector
     def seleccionar_foto():
       ruta = filedialog.askopenfilename(
           title="Seleccionar foto de perfil",
