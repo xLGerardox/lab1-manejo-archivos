@@ -1,6 +1,8 @@
 # luis GERARDO tucux RIVERA
 import json
 import os
+
+os.environ["TK_SILENCE_DEPRECATION"] = "1"
 import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
