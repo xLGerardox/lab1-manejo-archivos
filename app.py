@@ -1,3 +1,4 @@
+# luis GERARDO tucux RIVERA
 import json
 import os
 import shutil
@@ -17,7 +18,6 @@ DEFAULT_CONFIG = {
     "color_letra": "#000000",
     "foto_perfil": "",
 }
-
 
 class ConfigApp:
 
@@ -84,6 +84,7 @@ class ConfigApp:
       messagebox.showerror("Error", f"Ocurrió un error al guardar: {e}")
       if os.path.exists(TEMP_FILE):
         os.remove(TEMP_FILE)
+
 
   def crear_menu(self):
     menubar = tk.Menu(self.root)
@@ -212,7 +213,6 @@ class ConfigApp:
         top, text="Guardar Cambios", command=guardar_cambios_ui
     )
     btn_guardar.pack(pady=20)
-
 
 if __name__ == "__main__":
   root = tk.Tk()
